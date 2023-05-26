@@ -38,6 +38,7 @@ type Server struct {
 	HostSigners []Signer // private keys for the host key, must have at least one
 	Version     string   // server version to be sent before the initial handshake
 
+	NoClientAuthCallback          NoClientAuthCallback          // none authentication handler
 	KeyboardInteractiveHandler    KeyboardInteractiveHandler    // keyboard-interactive authentication handler
 	PasswordHandler               PasswordHandler               // password authentication handler
 	PublicKeyHandler              PublicKeyHandler              // public key authentication handler
@@ -129,6 +130,7 @@ func (srv *Server) config(ctx Context) *gossh.ServerConfig {
 	if srv.PasswordHandler == nil && srv.PublicKeyHandler == nil && srv.KeyboardInteractiveHandler == nil {
 		config.NoClientAuth = true
 	}
+
 	if srv.Version != "" {
 		config.ServerVersion = "SSH-2.0-" + srv.Version
 	}
@@ -155,6 +157,16 @@ func (srv *Server) config(ctx Context) *gossh.ServerConfig {
 		config.KeyboardInteractiveCallback = func(conn gossh.ConnMetadata, challenger gossh.KeyboardInteractiveChallenge) (*gossh.Permissions, error) {
 			applyConnMetadata(ctx, conn)
 			if ok := srv.KeyboardInteractiveHandler(ctx, challenger); !ok {
+				return ctx.Permissions().Permissions, fmt.Errorf("permission denied")
+			}
+			return ctx.Permissions().Permissions, nil
+		}
+	}
+	if srv.NoClientAuthCallback != nil {
+		config.NoClientAuth = true
+		config.NoClientAuthCallback = func(conn gossh.ConnMetadata) (*gossh.Permissions, error) {
+			applyConnMetadata(ctx, conn)
+			if ok := srv.NoClientAuthCallback(ctx); !ok {
 				return ctx.Permissions().Permissions, fmt.Errorf("permission denied")
 			}
 			return ctx.Permissions().Permissions, nil
@@ -291,7 +303,7 @@ func (srv *Server) HandleConn(newConn net.Conn) {
 
 	ctx.SetValue(ContextKeyConn, sshConn)
 	applyConnMetadata(ctx, sshConn)
-	//go gossh.DiscardRequests(reqs)
+	// go gossh.DiscardRequests(reqs)
 	go srv.handleRequests(ctx, reqs)
 	for ch := range chans {
 		handler := srv.ChannelHandlers[ch.ChannelType()]
@@ -368,8 +380,8 @@ func (srv *Server) SetOption(option Option) error {
 	// internal method. We can't actually lock here because if something calls
 	// (as an example) AddHostKey, it will deadlock.
 
-	//srv.mu.Lock()
-	//defer srv.mu.Unlock()
+	// srv.mu.Lock()
+	// defer srv.mu.Unlock()
 
 	return option(srv)
 }

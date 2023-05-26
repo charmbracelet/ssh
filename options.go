@@ -49,6 +49,13 @@ func KeyboardInteractiveAuth(fn KeyboardInteractiveHandler) Option {
 	}
 }
 
+func NoClientAuth(fn NoClientAuthCallback) Option {
+	return func(srv *Server) error {
+		srv.NoClientAuthCallback = fn
+		return nil
+	}
+}
+
 // HostKeyPEM returns a functional option that adds HostSigners to the server
 // from a PEM file as bytes.
 func HostKeyPEM(bytes []byte) Option {
