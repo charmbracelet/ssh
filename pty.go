@@ -2,8 +2,12 @@ package ssh
 
 import (
 	"bytes"
+	"errors"
 	"io"
 )
+
+// ErrUnsupported is returned when the platform does not support PTY.
+var ErrUnsupported = errors.New("pty unsupported")
 
 // NewPtyWriter creates a writer that handles when the session has a active
 // PTY, replacing the \n with \r\n.

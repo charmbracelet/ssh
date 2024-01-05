@@ -68,7 +68,7 @@ func HostKeyPEM(bytes []byte) Option {
 // denying PTY requests.
 func NoPty() Option {
 	return func(srv *Server) error {
-		srv.PtyCallback = func(ctx Context, pty Pty) bool {
+		srv.PtyCallback = func(Context, Pty) bool {
 			return false
 		}
 		return nil
@@ -81,4 +81,23 @@ func WrapConn(fn ConnCallback) Option {
 		srv.ConnCallback = fn
 		return nil
 	}
+}
+
+var contextKeyEmulatePty = &contextKey{"emulate-pty"}
+
+// EmulatePty returns true if the session is set to emulate a PTY.
+func EmulatePty(ctx Context, _ Session, _ Pty) (func() error, error) {
+	ctx.SetValue(contextKeyEmulatePty, true)
+	return func() error { return nil }, nil
+}
+
+// AllocatePty returns a functional option that sets PtyCallback on the server
+// to allocate a PTY for sessions that request it.
+func AllocatePty(_ Context, s Session, pty Pty) (func() error, error) {
+	sess, ok := s.(*session)
+	if !ok {
+		return nil, nil
+	}
+
+	return sess.ptyAllocate(pty.Term, pty.Window, pty.Modes)
 }
