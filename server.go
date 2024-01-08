@@ -44,7 +44,7 @@ type Server struct {
 	PasswordHandler               PasswordHandler               // password authentication handler
 	PublicKeyHandler              PublicKeyHandler              // public key authentication handler
 	PtyCallback                   PtyCallback                   // callback for allocating and allowing PTY sessions, ssh.EmulatePtyCallback if nil
-	PtyHandler                    PtyHandler                    // pty allocation handler, ssh.EmulatePty if nil
+	PtyHandler                    PtyHandler                    // pty allocation handler, ssh.emulatePtyHandler if nil
 	ConnCallback                  ConnCallback                  // optional callback for wrapping net.Conn before handling
 	LocalPortForwardingCallback   LocalPortForwardingCallback   // callback for allowing local port forwarding, denies all if nil
 	ReversePortForwardingCallback ReversePortForwardingCallback // callback for allowing reverse port forwarding, denies all if nil
@@ -133,7 +133,7 @@ func (srv *Server) config(ctx Context) *gossh.ServerConfig {
 		config.NoClientAuth = true
 	}
 	if srv.PtyHandler == nil {
-		srv.PtyHandler = EmulatePty
+		srv.PtyHandler = emulatePtyHandler
 	}
 	if srv.Version != "" {
 		config.ServerVersion = "SSH-2.0-" + srv.Version

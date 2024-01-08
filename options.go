@@ -85,21 +85,28 @@ func WrapConn(fn ConnCallback) Option {
 
 var contextKeyEmulatePty = &contextKey{"emulate-pty"}
 
-// EmulatePty returns a PtyHandler that fakes a PTY. It uses PtyWriter
-// underneath.
-func EmulatePty(ctx Context, _ Session, _ Pty) (func() error, error) {
+func emulatePtyHandler(ctx Context, _ Session, _ Pty) (func() error, error) {
 	ctx.SetValue(contextKeyEmulatePty, true)
 	return func() error { return nil }, nil
 }
 
-// AllocatePty returns a PtyHandler that allocates a PTY.
-// Implementers who wish to use an actual PTY should use this along with the
-// platform specific PTY implementation defined in pty_*.go.
-func AllocatePty(_ Context, s Session, pty Pty) (func() error, error) {
-	sess, ok := s.(*session)
-	if !ok {
-		return nil, nil
+// EmulatePty returns a functional option that fakes a PTY. It uses PtyWriter
+// underneath.
+func EmulatePty() Option {
+	return func(s *Server) error {
+		s.PtyHandler = emulatePtyHandler
+		return nil
 	}
+}
 
-	return sess.ptyAllocate(pty.Term, pty.Window, pty.Modes)
+// AllocatePty returns a functional option that allocates a PTY. Implementers
+// who wish to use an actual PTY should use this along with the platform
+// specific PTY implementation defined in pty_*.go.
+func AllocatePty() Option {
+	return func(s *Server) error {
+		s.PtyHandler = func(_ Context, s Session, pty Pty) (func() error, error) {
+			return s.(*session).ptyAllocate(pty.Term, pty.Window, pty.Modes)
+		}
+		return nil
+	}
 }
