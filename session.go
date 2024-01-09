@@ -364,7 +364,7 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 
 				defer closer() // nolint: errcheck
 
-				if !sess.EmulatedPty() {
+				if !sess.EmulatedPty() && !sess.pty.IsZero() {
 					go func() {
 						for win := range sess.winch {
 							if err := resizePty(sess, win); err != nil {

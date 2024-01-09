@@ -19,6 +19,14 @@ type impl struct {
 	*conpty.ConPty
 }
 
+func (i *impl) IsZero() bool {
+	return i.ConPty == nil
+}
+
+func (i *impl) Name() string {
+	return "windows-pty"
+}
+
 func (i *impl) Read(p []byte) (n int, err error) {
 	return i.ConPty.Read(p)
 }

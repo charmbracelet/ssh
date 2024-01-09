@@ -21,9 +21,15 @@ type impl struct {
 
 	// Slave is the slave PTY file descriptor.
 	Slave *os.File
+}
 
-	// Name is the name of the slave PTY.
-	Name string
+func (i *impl) IsZero() bool {
+	return i.Master == nil && i.Slave == nil
+}
+
+// Name returns the name of the slave PTY.
+func (i *impl) Name() string {
+	return i.Slave.Name()
 }
 
 // Read implements ptyInterface.
@@ -60,10 +66,13 @@ func (i *impl) Resize(w int, h int) (rErr error) {
 }
 
 func (i *impl) start(c *exec.Cmd) error {
-	c.Stdin, c.Stdout, c.Stderr := i.Slave, i.Slave, i.Slave
+	c.Stdin, c.Stdout, c.Stderr = i.Slave, i.Slave, i.Slave
 	if c.SysProcAttr == nil {
 		c.SysProcAttr = &syscall.SysProcAttr{}
 	}
+	c.SysProcAttr.Setctty = true
+	c.SysProcAttr.Setsid = true
+	return c.Start()
 }
 
 func newPty(_ Context, _ string, win Window, modes ssh.TerminalModes) (_ impl, rErr error) {
@@ -83,7 +92,7 @@ func newPty(_ Context, _ string, win Window, modes ssh.TerminalModes) (_ impl, r
 		return impl{}, err
 	}
 
-	return impl{Master: ptm, Slave: pts, Name: pts.Name()}, rErr
+	return impl{Master: ptm, Slave: pts}, rErr
 }
 
 func applyTerminalModesToFd(fd uintptr, width int, height int, modes ssh.TerminalModes) error {

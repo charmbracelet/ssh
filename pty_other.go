@@ -11,6 +11,14 @@ import (
 
 type impl struct{}
 
+func (i *impl) IsZero() bool {
+	return true
+}
+
+func (i *impl) Name() string {
+	return ""
+}
+
 func (i *impl) Read(p []byte) (n int, err error) {
 	return 0, ErrUnsupported
 }
