@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
-	"runtime"
 	"sync"
 
 	"github.com/anmitsu/go-shlex"
@@ -366,11 +366,14 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 				defer closer() // nolint: errcheck
 
 				if !sess.EmulatedPty() {
-					if err := resizePty(sess, ptyReq.Window); err != nil {
-						// TODO: handle error
-						req.Reply(false, nil)
-						continue
-					}
+					go func() {
+						for win := range sess.winch {
+							if err := resizePty(sess, win); err != nil {
+								// TODO: handle error
+								continue
+							}
+						}
+					}()
 				}
 			}
 
@@ -380,21 +383,16 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 			}()
 			req.Reply(ok, nil)
 		case "window-change":
+			log.Printf("window resize event")
 			if sess.pty == nil {
 				req.Reply(false, nil)
 				continue
 			}
 			win, _, ok := parseWindow(req.Payload)
 			if ok {
+				log.Printf("window resize %dx%d", win.Width, win.Height)
 				sess.pty.Window = win
 				sess.winch <- win
-				if !sess.EmulatedPty() {
-					if err := resizePty(sess, win); err != nil {
-						// TODO: handle error
-						req.Reply(false, nil)
-						continue
-					}
-				}
 			}
 			req.Reply(ok, nil)
 		case agentRequestType:
@@ -418,11 +416,6 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 }
 
 func (s *session) ptyAllocate(term string, win Window, modes gossh.TerminalModes) (func() error, error) {
-	if runtime.GOOS == "windows" {
-		// TODO: handle ConPty
-		return nil, nil
-	}
-
 	p, err := newPty(s.ctx, term, win, modes)
 	if err != nil {
 		return nil, err
@@ -439,11 +432,6 @@ func (s *session) ptyAllocate(term string, win Window, modes gossh.TerminalModes
 }
 
 func resizePty(sess *session, win Window) error {
-	if runtime.GOOS == "windows" {
-		// TODO: handle ConPty
-		return nil
-	}
-
 	if sess.pty == nil {
 		return nil
 	}
