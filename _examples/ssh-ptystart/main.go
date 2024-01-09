@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
+	"time"
 
 	"github.com/charmbracelet/ssh"
 )
@@ -22,22 +24,32 @@ func main() {
 			return
 		}
 
-		cmd := exec.Command("powershell.exe")
-		cmd.Env = append(os.Environ(), "SSH_TTY=windows-pty", fmt.Sprintf("TERM=%s", pty.Term))
+		name := "bash"
+		if runtime.GOOS == "windows" {
+			name = "powershell.exe"
+		}
+		cmd := exec.Command(name)
+		cmd.Env = append(os.Environ(), "SSH_TTY="+pty.Name(), fmt.Sprintf("TERM=%s", pty.Term))
 		if err := pty.Start(cmd); err != nil {
 			fmt.Fprintln(s, err.Error())
 			s.Exit(1)
 			return
 		}
 
-		// ProcessState gets populated by pty.Start
-		for {
-			if cmd.ProcessState != nil {
-				break
+		if runtime.GOOS == "windows" {
+			// ProcessState gets populated by pty.Start waiting on the process
+			// to exit.
+			for cmd.ProcessState == nil {
+				time.Sleep(100 * time.Millisecond)
+			}
+
+			s.Exit(cmd.ProcessState.ExitCode())
+		} else {
+			if err := cmd.Wait(); err != nil {
+				fmt.Fprintln(s, err)
+				s.Exit(cmd.ProcessState.ExitCode())
 			}
 		}
-
-		s.Exit(cmd.ProcessState.ExitCode())
 	})
 
 	log.Println("starting ssh server on port 2222...")
