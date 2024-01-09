@@ -1,10 +1,11 @@
-//go:build !linux && !darwin && !freebsd && !dragonfly && !netbsd && !openbsd && !solaris
-// +build !linux,!darwin,!freebsd,!dragonfly,!netbsd,!openbsd,!solaris
+//go:build !linux && !darwin && !freebsd && !dragonfly && !netbsd && !openbsd && !solaris && !windows
+// +build !linux,!darwin,!freebsd,!dragonfly,!netbsd,!openbsd,!solaris,!windows
 
-// TODO: support Windows
 package ssh
 
 import (
+	"os/exec"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -24,6 +25,10 @@ func (i *impl) Resize(w int, h int) error {
 
 func (i *impl) Close() error {
 	return nil
+}
+
+func (*impl) start(*exec.Cmd) error {
+	return ErrUnsupported
 }
 
 func newPty(Context, string, Window, ssh.TerminalModes) (impl, error) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"os/exec"
 )
 
 // ErrUnsupported is returned when the platform does not support PTY.
@@ -58,4 +59,13 @@ func (rw readWriterDelegate) Read(p []byte) (n int, err error) {
 
 func (rw readWriterDelegate) Write(p []byte) (n int, err error) {
 	return rw.w.Write(p)
+}
+
+// Start starts a *exec.Cmd attached to the Session. If a PTY is allocated,
+// it will use that for I/O.
+// On Windows, the process execution lifecycle is not managed by Go and has to
+// be managed manually. This means that c.Wait() won't work.
+// See https://github.com/charmbracelet/x/blob/main/term/conpty/conpty_windows.go#L155
+func (p *Pty) Start(c *exec.Cmd) error {
+	return p.start(c)
 }

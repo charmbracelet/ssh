@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"sync"
 
@@ -383,14 +382,12 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 			}()
 			req.Reply(ok, nil)
 		case "window-change":
-			log.Printf("window resize event")
 			if sess.pty == nil {
 				req.Reply(false, nil)
 				continue
 			}
 			win, _, ok := parseWindow(req.Payload)
 			if ok {
-				log.Printf("window resize %dx%d", win.Width, win.Height)
 				sess.pty.Window = win
 				sess.winch <- win
 			}

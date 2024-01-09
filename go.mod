@@ -1,6 +1,8 @@
 module github.com/charmbracelet/ssh
 
-go 1.17
+go 1.21
+
+toolchain go1.21.5
 
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
@@ -10,3 +12,5 @@ require (
 )
 
 require golang.org/x/sys v0.16.0
+
+require github.com/charmbracelet/x/term v0.0.0-20240109162103-b354873f6f2c
