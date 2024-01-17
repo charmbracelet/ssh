@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
-	github.com/charmbracelet/x/exp/term v0.0.0-20240117022428-ad1a9af930ce
+	github.com/charmbracelet/x/exp/term v0.0.0-20240117023140-5a960f8259d2
 	github.com/creack/pty v1.1.21
 	github.com/u-root/u-root v0.11.0
 	golang.org/x/crypto v0.17.0

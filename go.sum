@@ -14,8 +14,8 @@ github.com/bwesterb/go-ristretto v1.2.0/go.mod h1:fUIoIZaG73pV5biE2Blr2xEzDoMj7N
 github.com/cenkalti/backoff/v4 v4.1.3/go.mod h1:scbssz8iZGpm3xbr14ovlUdkxfGXNInqkPWOWmG2CLw=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
-github.com/charmbracelet/x/exp/term v0.0.0-20240117022428-ad1a9af930ce h1:hrMjqtp3KM0mH0Nk3ha0y6jqzx1wMEDlpAHIuIIU0KU=
-github.com/charmbracelet/x/exp/term v0.0.0-20240117022428-ad1a9af930ce/go.mod h1:gZhBSrUrKExc/b96uKxAvfLu8NqEohAwL0YpYhS1pZA=
+github.com/charmbracelet/x/exp/term v0.0.0-20240117023140-5a960f8259d2 h1:e9aZqMOJ7Xyn8sOUgTNUgFCuCxsu74kOITPClYXbEaM=
+github.com/charmbracelet/x/exp/term v0.0.0-20240117023140-5a960f8259d2/go.mod h1:gZhBSrUrKExc/b96uKxAvfLu8NqEohAwL0YpYhS1pZA=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtMxxK7fi4I=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
