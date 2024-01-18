@@ -227,6 +227,7 @@ func TestPty(t *testing.T) {
 	done := make(chan bool)
 	session, _, cleanup := newTestSession(t, &Server{
 		Handler: func(s Session) {
+			defer func() { close(done) }()
 			ptyReq, _, isPty := s.Pty()
 			if !isPty {
 				t.Fatalf("expected pty but none requested")
@@ -240,7 +241,6 @@ func TestPty(t *testing.T) {
 			if ptyReq.Window.Height != winHeight {
 				t.Fatalf("expected window height %#v but got %#v", winHeight, ptyReq.Window.Height)
 			}
-			close(done)
 		},
 	}, nil)
 	defer cleanup()
