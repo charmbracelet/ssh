@@ -290,6 +290,7 @@ func TestPtyResize(t *testing.T) {
 	done := make(chan bool)
 	session, _, cleanup := newTestSession(t, &Server{
 		Handler: func(s Session) {
+			defer func() { close(done) }()
 			ptyReq, winCh, isPty := s.Pty()
 			if !isPty {
 				t.Fatalf("expected pty but none requested")
@@ -300,7 +301,6 @@ func TestPtyResize(t *testing.T) {
 			for win := range winCh {
 				winches <- win
 			}
-			close(done)
 		},
 	}, nil)
 	defer cleanup()
