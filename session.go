@@ -216,7 +216,7 @@ func (sess *session) EmulatedPty() bool {
 }
 
 func (sess *session) Pty() (Pty, <-chan Window, bool) {
-	if sess.pty != nil && !sess.pty.IsZero() {
+	if sess.pty != nil && (sess.EmulatedPty() || !sess.pty.IsZero()) {
 		return *sess.pty, sess.winch, true
 	}
 	return Pty{}, sess.winch, false
