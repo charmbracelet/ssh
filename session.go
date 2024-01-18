@@ -273,7 +273,7 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 				}
 				sess.handler(sess)
 				sess.Exit(0)
-				if sess.pty != nil {
+				if sess.pty != nil && !sess.pty.IsZero() {
 					sess.pty.Close() // nolint: errcheck
 				}
 			}()
