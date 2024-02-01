@@ -54,7 +54,7 @@ func (i *impl) Resize(w int, h int) (rErr error) {
 	}
 
 	return conn.Control(func(fd uintptr) {
-		rErr = termios.SetWinSize(fd, &unix.Winsize{
+		rErr = termios.SetWinSize(int(fd), &unix.Winsize{
 			Row: uint16(h),
 			Col: uint16(w),
 		})
@@ -88,8 +88,12 @@ func newPty(_ Context, _ string, win Window, modes ssh.TerminalModes) (_ impl, r
 
 func applyTerminalModesToFd(fd uintptr, width int, height int, modes ssh.TerminalModes) error {
 	var ispeed, ospeed uint32
-	ccs := map[string]uint8{}
-	bools := map[string]bool{}
+	ccs := map[termios.CC]uint8{}
+	iflag := map[termios.I]bool{}
+	oflag := map[termios.O]bool{}
+	cflag := map[termios.C]bool{}
+	lflag := map[termios.L]bool{}
+
 	for op, value := range modes {
 		switch op {
 		case ssh.TTY_OP_ISPEED:
@@ -97,87 +101,117 @@ func applyTerminalModesToFd(fd uintptr, width int, height int, modes ssh.Termina
 		case ssh.TTY_OP_OSPEED:
 			ospeed = value
 		default:
-			name, ok := sshToCc[op]
+			cc, ok := sshToCc[op]
 			if ok {
-				ccs[name] = uint8(value)
+				ccs[cc] = uint8(value)
 				continue
 			}
-			name, ok = sshToBools[op]
+			i, ok := sshToIflag[op]
 			if ok {
-				bools[name] = value > 0
+				iflag[i] = value > 0
+				continue
+			}
+			o, ok := sshToOflag[op]
+			if ok {
+				oflag[o] = value > 0
 				continue
 			}
 
+			c, ok := sshToCflag[op]
+			if ok {
+				cflag[c] = value > 0
+				continue
+			}
+			l, ok := sshToLflag[op]
+			if ok {
+				lflag[l] = value > 0
+				continue
+			}
 		}
 	}
-	if err := termios.SetTermios(int(fd), ispeed, ospeed, ccs, bools); err != nil {
+	if err := termios.SetTermios(
+		int(fd),
+		ispeed,
+		ospeed,
+		ccs,
+		iflag,
+		oflag,
+		cflag,
+		lflag,
+	); err != nil {
 		return err
 	}
-	return termios.SetWinSize(fd, &unix.Winsize{
+	return termios.SetWinSize(int(fd), &unix.Winsize{
 		Row: uint16(height),
 		Col: uint16(width),
 	})
 }
 
-var sshToCc = map[uint8]string{
-	ssh.VINTR:    "intr",
-	ssh.VQUIT:    "quit",
-	ssh.VERASE:   "erase",
-	ssh.VKILL:    "kill",
-	ssh.VEOF:     "eof",
-	ssh.VEOL:     "eol",
-	ssh.VEOL2:    "eol2",
-	ssh.VSTART:   "start",
-	ssh.VSTOP:    "stop",
-	ssh.VSUSP:    "susp",
-	ssh.VWERASE:  "werase",
-	ssh.VREPRINT: "rprnt",
-	ssh.VLNEXT:   "lnext",
-	ssh.VDISCARD: "discard",
-	ssh.VSTATUS:  "status",
-	ssh.VSWTCH:   "swtch",
-	ssh.VFLUSH:   "flush",
-	ssh.VDSUSP:   "dsusp",
+var sshToCc = map[uint8]termios.CC{
+	ssh.VINTR:    termios.INTR,
+	ssh.VQUIT:    termios.QUIT,
+	ssh.VERASE:   termios.ERASE,
+	ssh.VKILL:    termios.KILL,
+	ssh.VEOF:     termios.EOF,
+	ssh.VEOL:     termios.EOL,
+	ssh.VEOL2:    termios.EOL2,
+	ssh.VSTART:   termios.START,
+	ssh.VSTOP:    termios.STOP,
+	ssh.VSUSP:    termios.SUSP,
+	ssh.VWERASE:  termios.WERASE,
+	ssh.VREPRINT: termios.RPRNT,
+	ssh.VLNEXT:   termios.LNEXT,
+	ssh.VDISCARD: termios.DISCARD,
+	ssh.VSTATUS:  termios.STATUS,
+	ssh.VSWTCH:   termios.SWTCH,
+	ssh.VFLUSH:   termios.FLUSH,
+	ssh.VDSUSP:   termios.DSUSP,
 }
 
-var sshToBools = map[uint8]string{
-	ssh.IGNPAR:  "ignpar",
-	ssh.PARMRK:  "parmrk",
-	ssh.INPCK:   "inpck",
-	ssh.ISTRIP:  "istrip",
-	ssh.INLCR:   "inlcr",
-	ssh.IGNCR:   "igncr",
-	ssh.ICRNL:   "icrnl",
-	ssh.IUCLC:   "iuclc",
-	ssh.IXON:    "ixon",
-	ssh.IXANY:   "ixany",
-	ssh.IXOFF:   "ixoff",
-	ssh.IMAXBEL: "imaxbel",
+var sshToIflag = map[uint8]termios.I{
+	ssh.IGNPAR:  termios.IGNPAR,
+	ssh.PARMRK:  termios.PARMRK,
+	ssh.INPCK:   termios.INPCK,
+	ssh.ISTRIP:  termios.ISTRIP,
+	ssh.INLCR:   termios.INLCR,
+	ssh.IGNCR:   termios.IGNCR,
+	ssh.ICRNL:   termios.ICRNL,
+	ssh.IUCLC:   termios.IUCLC,
+	ssh.IXON:    termios.IXON,
+	ssh.IXANY:   termios.IXANY,
+	ssh.IXOFF:   termios.IXOFF,
+	ssh.IMAXBEL: termios.IMAXBEL,
+}
 
-	ssh.IUTF8:   "iutf8",
-	ssh.ISIG:    "isig",
-	ssh.ICANON:  "icanon",
-	ssh.ECHO:    "echo",
-	ssh.ECHOE:   "echoe",
-	ssh.ECHOK:   "echok",
-	ssh.ECHONL:  "echonl",
-	ssh.NOFLSH:  "noflsh",
-	ssh.TOSTOP:  "tostop",
-	ssh.IEXTEN:  "iexten",
-	ssh.ECHOCTL: "echoctl",
-	ssh.ECHOKE:  "echoke",
-	ssh.PENDIN:  "pendin",
-	ssh.XCASE:   "xcase",
+var sshToOflag = map[uint8]termios.O{
+	ssh.OPOST:  termios.OPOST,
+	ssh.OLCUC:  termios.OLCUC,
+	ssh.ONLCR:  termios.ONLCR,
+	ssh.OCRNL:  termios.OCRNL,
+	ssh.ONOCR:  termios.ONOCR,
+	ssh.ONLRET: termios.ONLRET,
+}
 
-	ssh.OPOST:  "opost",
-	ssh.OLCUC:  "olcuc",
-	ssh.ONLCR:  "onlcr",
-	ssh.OCRNL:  "ocrnl",
-	ssh.ONOCR:  "onocr",
-	ssh.ONLRET: "onlret",
+var sshToCflag = map[uint8]termios.C{
+	ssh.CS7:    termios.CS7,
+	ssh.CS8:    termios.CS8,
+	ssh.PARENB: termios.PARENB,
+	ssh.PARODD: termios.PARODD,
+}
 
-	ssh.CS7:    "cs7",
-	ssh.CS8:    "cs8",
-	ssh.PARENB: "parenb",
-	ssh.PARODD: "parodd",
+var sshToLflag = map[uint8]termios.L{
+	ssh.IUTF8:   termios.IUTF8,
+	ssh.ISIG:    termios.ISIG,
+	ssh.ICANON:  termios.ICANON,
+	ssh.ECHO:    termios.ECHO,
+	ssh.ECHOE:   termios.ECHOE,
+	ssh.ECHOK:   termios.ECHOK,
+	ssh.ECHONL:  termios.ECHONL,
+	ssh.NOFLSH:  termios.NOFLSH,
+	ssh.TOSTOP:  termios.TOSTOP,
+	ssh.IEXTEN:  termios.IEXTEN,
+	ssh.ECHOCTL: termios.ECHOCTL,
+	ssh.ECHOKE:  termios.ECHOKE,
+	ssh.PENDIN:  termios.PENDIN,
+	ssh.XCASE:   termios.XCASE,
 }
