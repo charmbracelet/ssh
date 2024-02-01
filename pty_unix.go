@@ -4,12 +4,11 @@
 package ssh
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 
+	"github.com/charmbracelet/x/exp/term/termios"
 	"github.com/creack/pty"
-	"github.com/u-root/u-root/pkg/termios"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/sys/unix"
 )
@@ -55,11 +54,9 @@ func (i *impl) Resize(w int, h int) (rErr error) {
 	}
 
 	return conn.Control(func(fd uintptr) {
-		rErr = termios.SetWinSize(fd, &termios.Winsize{
-			Winsize: unix.Winsize{
-				Row: uint16(h),
-				Col: uint16(w),
-			},
+		rErr = termios.SetWinSize(fd, &unix.Winsize{
+			Row: uint16(h),
+			Col: uint16(w),
 		})
 	})
 }
@@ -90,104 +87,97 @@ func newPty(_ Context, _ string, win Window, modes ssh.TerminalModes) (_ impl, r
 }
 
 func applyTerminalModesToFd(fd uintptr, width int, height int, modes ssh.TerminalModes) error {
-	// Get the current TTY configuration.
-	tios, err := termios.GTTY(int(fd))
-	if err != nil {
-		return fmt.Errorf("GTTY: %w", err)
-	}
+	var ispeed, ospeed uint32
+	ccs := map[string]uint8{}
+	bools := map[string]bool{}
+	for op, value := range modes {
+		switch op {
+		case ssh.TTY_OP_ISPEED:
+			ispeed = value
+		case ssh.TTY_OP_OSPEED:
+			ospeed = value
+		default:
+			name, ok := sshToCc[op]
+			if ok {
+				ccs[name] = uint8(value)
+				continue
+			}
+			name, ok = sshToBools[op]
+			if ok {
+				bools[name] = value > 0
+				continue
+			}
 
-	// Apply the modes from the SSH request.
-	tios.Row = height
-	tios.Col = width
-
-	for c, v := range modes {
-		if c == ssh.TTY_OP_ISPEED {
-			tios.Ispeed = int(v)
-			continue
-		}
-		if c == ssh.TTY_OP_OSPEED {
-			tios.Ospeed = int(v)
-			continue
-		}
-		k, ok := terminalModeFlagNames[c]
-		if !ok {
-			continue
-		}
-		if _, ok := tios.CC[k]; ok {
-			tios.CC[k] = uint8(v)
-			continue
-		}
-		if _, ok := tios.Opts[k]; ok {
-			tios.Opts[k] = v > 0
-			continue
 		}
 	}
-
-	// Save the new TTY configuration.
-	if _, err := tios.STTY(int(fd)); err != nil {
-		return fmt.Errorf("STTY: %w", err)
+	if err := termios.SetTermios(int(fd), ispeed, ospeed, ccs, bools); err != nil {
+		return err
 	}
-
-	return nil
+	return termios.SetWinSize(fd, &unix.Winsize{
+		Row: uint16(height),
+		Col: uint16(width),
+	})
 }
 
-// terminalModeFlagNames maps the SSH terminal mode flags to mnemonic
-// names used by the termios package.
-var terminalModeFlagNames = map[uint8]string{
-	ssh.VINTR:         "intr",
-	ssh.VQUIT:         "quit",
-	ssh.VERASE:        "erase",
-	ssh.VKILL:         "kill",
-	ssh.VEOF:          "eof",
-	ssh.VEOL:          "eol",
-	ssh.VEOL2:         "eol2",
-	ssh.VSTART:        "start",
-	ssh.VSTOP:         "stop",
-	ssh.VSUSP:         "susp",
-	ssh.VDSUSP:        "dsusp",
-	ssh.VREPRINT:      "rprnt",
-	ssh.VWERASE:       "werase",
-	ssh.VLNEXT:        "lnext",
-	ssh.VFLUSH:        "flush",
-	ssh.VSWTCH:        "swtch",
-	ssh.VSTATUS:       "status",
-	ssh.VDISCARD:      "discard",
-	ssh.IGNPAR:        "ignpar",
-	ssh.PARMRK:        "parmrk",
-	ssh.INPCK:         "inpck",
-	ssh.ISTRIP:        "istrip",
-	ssh.INLCR:         "inlcr",
-	ssh.IGNCR:         "igncr",
-	ssh.ICRNL:         "icrnl",
-	ssh.IUCLC:         "iuclc",
-	ssh.IXON:          "ixon",
-	ssh.IXANY:         "ixany",
-	ssh.IXOFF:         "ixoff",
-	ssh.IMAXBEL:       "imaxbel",
-	ssh.IUTF8:         "iutf8",
-	ssh.ISIG:          "isig",
-	ssh.ICANON:        "icanon",
-	ssh.XCASE:         "xcase",
-	ssh.ECHO:          "echo",
-	ssh.ECHOE:         "echoe",
-	ssh.ECHOK:         "echok",
-	ssh.ECHONL:        "echonl",
-	ssh.NOFLSH:        "noflsh",
-	ssh.TOSTOP:        "tostop",
-	ssh.IEXTEN:        "iexten",
-	ssh.ECHOCTL:       "echoctl",
-	ssh.ECHOKE:        "echoke",
-	ssh.PENDIN:        "pendin",
-	ssh.OPOST:         "opost",
-	ssh.OLCUC:         "olcuc",
-	ssh.ONLCR:         "onlcr",
-	ssh.OCRNL:         "ocrnl",
-	ssh.ONOCR:         "onocr",
-	ssh.ONLRET:        "onlret",
-	ssh.CS7:           "cs7",
-	ssh.CS8:           "cs8",
-	ssh.PARENB:        "parenb",
-	ssh.PARODD:        "parodd",
-	ssh.TTY_OP_ISPEED: "tty_op_ispeed",
-	ssh.TTY_OP_OSPEED: "tty_op_ospeed",
+var sshToCc = map[uint8]string{
+	ssh.VINTR:    "intr",
+	ssh.VQUIT:    "quit",
+	ssh.VERASE:   "erase",
+	ssh.VKILL:    "kill",
+	ssh.VEOF:     "eof",
+	ssh.VEOL:     "eol",
+	ssh.VEOL2:    "eol2",
+	ssh.VSTART:   "start",
+	ssh.VSTOP:    "stop",
+	ssh.VSUSP:    "susp",
+	ssh.VWERASE:  "werase",
+	ssh.VREPRINT: "rprnt",
+	ssh.VLNEXT:   "lnext",
+	ssh.VDISCARD: "discard",
+	ssh.VSTATUS:  "status",
+	ssh.VSWTCH:   "swtch",
+	ssh.VFLUSH:   "flush",
+	ssh.VDSUSP:   "dsusp",
+}
+
+var sshToBools = map[uint8]string{
+	ssh.IGNPAR:  "ignpar",
+	ssh.PARMRK:  "parmrk",
+	ssh.INPCK:   "inpck",
+	ssh.ISTRIP:  "istrip",
+	ssh.INLCR:   "inlcr",
+	ssh.IGNCR:   "igncr",
+	ssh.ICRNL:   "icrnl",
+	ssh.IUCLC:   "iuclc",
+	ssh.IXON:    "ixon",
+	ssh.IXANY:   "ixany",
+	ssh.IXOFF:   "ixoff",
+	ssh.IMAXBEL: "imaxbel",
+
+	ssh.IUTF8:   "iutf8",
+	ssh.ISIG:    "isig",
+	ssh.ICANON:  "icanon",
+	ssh.ECHO:    "echo",
+	ssh.ECHOE:   "echoe",
+	ssh.ECHOK:   "echok",
+	ssh.ECHONL:  "echonl",
+	ssh.NOFLSH:  "noflsh",
+	ssh.TOSTOP:  "tostop",
+	ssh.IEXTEN:  "iexten",
+	ssh.ECHOCTL: "echoctl",
+	ssh.ECHOKE:  "echoke",
+	ssh.PENDIN:  "pendin",
+	ssh.XCASE:   "xcase",
+
+	ssh.OPOST:  "opost",
+	ssh.OLCUC:  "olcuc",
+	ssh.ONLCR:  "onlcr",
+	ssh.OCRNL:  "ocrnl",
+	ssh.ONOCR:  "onocr",
+	ssh.ONLRET: "onlret",
+
+	ssh.CS7:    "cs7",
+	ssh.CS8:    "cs8",
+	ssh.PARENB: "parenb",
+	ssh.PARODD: "parodd",
 }

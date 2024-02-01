@@ -4,9 +4,8 @@ go 1.17
 
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
-	github.com/charmbracelet/x/exp/term v0.0.0-20240130180102-bafe6fbaee60
+	github.com/charmbracelet/x/exp/term v0.0.0-20240201133954-f304b7c7bf98
 	github.com/creack/pty v1.1.21
-	github.com/u-root/u-root v0.11.0
 	golang.org/x/crypto v0.17.0
 	golang.org/x/sys v0.16.0
 )
