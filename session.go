@@ -72,6 +72,8 @@ type Session interface {
 	// of whether or not a PTY was accepted for this session.
 	Pty() (Pty, <-chan Window, bool)
 
+	Fd() uintptr
+
 	// Signals registers a channel to receive signals sent from the client. The
 	// channel must handle signal sends or it will block the SSH request loop.
 	// Registering nil will unregister the channel from signal sends. During the
@@ -138,6 +140,13 @@ func (sess *session) Stderr() io.ReadWriter {
 		return NewPtyReadWriter(sess.Channel.Stderr())
 	}
 	return sess.Channel.Stderr()
+}
+
+func (sess *session) Fd() uintptr {
+	if sess.pty != nil && sess.EmulatedPty() {
+		return sess.pty.Slave.Fd()
+	}
+	return 0
 }
 
 func (sess *session) Write(p []byte) (int, error) {
