@@ -189,6 +189,9 @@ func (srv *Server) config(ctx Context) *gossh.ServerConfig {
 			}
 
 			pkStr := base64.StdEncoding.EncodeToString(key.Marshal())
+			if ctx.Permissions().Permissions.Extensions == nil {
+				ctx.Permissions().Permissions.Extensions = map[string]string{}
+			}
 			ctx.Permissions().Permissions.Extensions[permissionsPublicKeyExt] = pkStr
 
 			return ctx.Permissions().Permissions, nil
