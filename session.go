@@ -195,11 +195,7 @@ func (sess *session) LocalAddr() net.Addr {
 }
 
 func (sess *session) Environ() []string {
-	env := append([]string(nil), sess.env...)
-	if sess.pty != nil {
-		env = append(env, "TERM="+sess.pty.Term)
-	}
-	return env
+	return append([]string(nil), sess.env...)
 }
 
 func (sess *session) RawCommand() string {
