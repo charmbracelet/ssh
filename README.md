@@ -4,7 +4,7 @@
 [![CircleCI](https://img.shields.io/circleci/project/github/gliderlabs/ssh.svg)](https://circleci.com/gh/gliderlabs/ssh)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gliderlabs/ssh)](https://goreportcard.com/report/github.com/gliderlabs/ssh) 
 [![OpenCollective](https://opencollective.com/ssh/sponsors/badge.svg)](#sponsors)
-[![Slack](http://slack.gliderlabs.com/badge.svg)](http://slack.gliderlabs.com) 
+[![Discord](https://img.shields.io/discord/473466411696873472?label=discord&logo=discord)](https://charm.land/chat) 
 [![Email Updates](https://img.shields.io/badge/updates-subscribe-yellow.svg)](https://app.convertkit.com/landing_pages/243312)
 
 > The Glider Labs SSH server package is dope.  &mdash;[@bradfitz](https://twitter.com/bradfitz), Go team member
@@ -47,7 +47,7 @@ A bunch of great examples are in the `_examples` directory.
 Pull requests are welcome! However, since this project is very much about API
 design, please submit API changes as issues to discuss before submitting PRs.
 
-Also, you can [join our Slack](http://slack.gliderlabs.com) to discuss as well.
+Also, you can [join our Discord](https://charm.land/chat) to discuss as well.
 
 ## Roadmap
 
