@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/donovanhubbard/ssh"
+	"github.com/charmbracelet/ssh"
 )
 
 const (
