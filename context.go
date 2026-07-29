@@ -127,13 +127,17 @@ func resetPermissions(ctx Context) {
 // this is separate from newContext because we will get ConnMetadata
 // at different points so it needs to be applied separately
 func applyConnMetadata(ctx Context, conn gossh.ConnMetadata) {
+	// The username is per-authentication-attempt and can change between
+	// attempts on the same connection, so it must be refreshed every time.
+	// The remaining values are connection-scoped and set only once.
+	ctx.SetValue(ContextKeyUser, conn.User())
+
 	if ctx.Value(ContextKeySessionID) != nil {
 		return
 	}
 	ctx.SetValue(ContextKeySessionID, hex.EncodeToString(conn.SessionID()))
 	ctx.SetValue(ContextKeyClientVersion, string(conn.ClientVersion()))
 	ctx.SetValue(ContextKeyServerVersion, string(conn.ServerVersion()))
-	ctx.SetValue(ContextKeyUser, conn.User())
 	ctx.SetValue(ContextKeyLocalAddr, conn.LocalAddr())
 	ctx.SetValue(ContextKeyRemoteAddr, conn.RemoteAddr())
 }
