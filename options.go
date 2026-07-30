@@ -112,3 +112,11 @@ func AllocatePty() Option {
 		return nil
 	}
 }
+
+// EnableProxyProtocol returns a functional option that sets EnableProxyProtocol on the server.
+func EnableProxyProtocol() Option {
+	return func(srv *Server) error {
+		srv.EnableProxyProtocol = true
+		return nil
+	}
+}

@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/x/conpty v0.2.0
 	github.com/charmbracelet/x/termios v0.1.1
 	github.com/creack/pty v1.1.24
+	github.com/pires/go-proxyproto v0.12.0
 	golang.org/x/crypto v0.54.0
 	golang.org/x/sys v0.47.0
 )
