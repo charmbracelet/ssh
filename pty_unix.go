@@ -6,6 +6,7 @@ package ssh
 import (
 	"os"
 	"os/exec"
+	"syscall"
 
 	"github.com/charmbracelet/x/termios"
 	"github.com/creack/pty"
@@ -63,6 +64,11 @@ func (i *impl) Resize(w int, h int) (rErr error) {
 
 func (i *impl) start(c *exec.Cmd) error {
 	c.Stdin, c.Stdout, c.Stderr = i.Slave, i.Slave, i.Slave
+	if c.SysProcAttr == nil {
+		c.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	c.SysProcAttr.Setsid = true
+	c.SysProcAttr.Setctty = true
 	return c.Start()
 }
 
