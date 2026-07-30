@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"sync"
 
@@ -95,7 +96,7 @@ const maxSigBufSize = 128
 func DefaultSessionHandler(srv *Server, conn *gossh.ServerConn, newChan gossh.NewChannel, ctx Context) {
 	ch, reqs, err := newChan.Accept()
 	if err != nil {
-		// TODO: trigger event callback
+		slog.Warn("ssh: failed to accept session channel", "err", err)
 		return
 	}
 	sess := &session{
@@ -273,9 +274,12 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 
 			go func() {
 				if sess.pty != nil && !sess.pty.IsZero() {
-					// TODO: log error to server
-					go io.Copy(sess.pty, sess) //nolint: errcheck
-					go io.Copy(sess, sess.pty) //nolint: errcheck
+					go func() {
+						_, _ = io.Copy(sess.pty, sess)
+					}()
+					go func() {
+						_, _ = io.Copy(sess, sess.pty)
+					}()
 				}
 				sess.handler(sess)
 				_ = sess.Exit(0)
@@ -412,7 +416,7 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 			_ = req.Reply(ok, nil)
 			sess.Unlock()
 		default:
-			// TODO: debug log
+			slog.Debug("ssh: unknown session request", "type", req.Type)
 			_ = req.Reply(false, nil)
 		}
 	}

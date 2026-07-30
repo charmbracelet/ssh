@@ -2,7 +2,7 @@ package ssh
 
 import (
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"strconv"
 	"sync"
@@ -107,7 +107,7 @@ func (h *ForwardedTCPHandler) HandleSSHRequest(ctx Context, srv *Server, req *go
 	case "tcpip-forward":
 		var reqPayload remoteForwardRequest
 		if err := gossh.Unmarshal(req.Payload, &reqPayload); err != nil {
-			// TODO: log parse failure
+			slog.Warn("ssh: failed to parse tcpip-forward request", "err", err)
 			return false, []byte{}
 		}
 		if srv.ReversePortForwardingCallback == nil || !srv.ReversePortForwardingCallback(ctx, reqPayload.BindAddr, reqPayload.BindPort) {
@@ -116,7 +116,7 @@ func (h *ForwardedTCPHandler) HandleSSHRequest(ctx Context, srv *Server, req *go
 		addr := net.JoinHostPort(reqPayload.BindAddr, strconv.Itoa(int(reqPayload.BindPort)))
 		ln, err := net.Listen("tcp", addr)
 		if err != nil {
-			// TODO: log listen failure
+			slog.Warn("ssh: reverse port forward listen failed", "addr", addr, "err", err)
 			return false, []byte{}
 		}
 		_, destPortStr, _ := net.SplitHostPort(ln.Addr().String())
@@ -140,7 +140,7 @@ func (h *ForwardedTCPHandler) HandleSSHRequest(ctx Context, srv *Server, req *go
 			for {
 				c, err := ln.Accept()
 				if err != nil {
-					// TODO: log accept failure
+					slog.Debug("ssh: reverse port forward accept failed", "addr", addr, "err", err)
 					break
 				}
 				originAddr, orignPortStr, _ := net.SplitHostPort(c.RemoteAddr().String())
@@ -154,8 +154,7 @@ func (h *ForwardedTCPHandler) HandleSSHRequest(ctx Context, srv *Server, req *go
 				go func() {
 					ch, reqs, err := conn.OpenChannel(forwardedTCPChannelType, payload)
 					if err != nil {
-						// TODO: log failure to open channel
-						log.Println(err)
+						slog.Warn("ssh: failed to open forwarded channel", "err", err)
 						_ = c.Close()
 						return
 					}
@@ -181,7 +180,7 @@ func (h *ForwardedTCPHandler) HandleSSHRequest(ctx Context, srv *Server, req *go
 	case "cancel-tcpip-forward":
 		var reqPayload remoteForwardCancelRequest
 		if err := gossh.Unmarshal(req.Payload, &reqPayload); err != nil {
-			// TODO: log parse failure
+			slog.Warn("ssh: failed to parse cancel-tcpip-forward request", "err", err)
 			return false, []byte{}
 		}
 		addr := net.JoinHostPort(reqPayload.BindAddr, strconv.Itoa(int(reqPayload.BindPort)))
