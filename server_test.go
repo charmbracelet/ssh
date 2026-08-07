@@ -217,7 +217,6 @@ func TestProxyProtocolEnabled(t *testing.T) {
 	serverIP, serverPortStr, _ := net.SplitHostPort(l.Addr().String())
 	serverPort, _ := strconv.Atoi(serverPortStr)
 	conn, err := net.Dial("tcp", l.Addr().String())
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,12 +315,11 @@ func TestProxyProtocolDisabled(t *testing.T) {
 	serverIP, serverPortStr, _ := net.SplitHostPort(l.Addr().String())
 	serverPort, _ := strconv.Atoi(serverPortStr)
 	conn, err := net.Dial("tcp", l.Addr().String())
-
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	//Set the PROXY header information. The server should not read it
+	// Set the PROXY header information. The server should not read it
 	header := &proxyproto.Header{
 		Version:           1,
 		Command:           proxyproto.PROXY,
