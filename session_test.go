@@ -345,6 +345,32 @@ func TestPtyResize(t *testing.T) {
 	<-done
 }
 
+func TestPtyResizeRace(t *testing.T) {
+	t.Parallel()
+	// Nothing here orders the handler's read of the pty against the request
+	// loop's write of it. TestPtyResize above cannot catch this, because it
+	// waits for the first window delivery before it resizes, which orders the
+	// two.
+	hold := make(chan struct{})
+	defer close(hold)
+	session, _, cleanup := newTestSession(t, &Server{
+		Handler: func(s Session) {
+			_, _, _ = s.Pty()
+			<-hold
+		},
+	}, nil)
+	defer cleanup()
+	if err := session.RequestPty("xterm", 40, 80, gossh.TerminalModes{}); err != nil {
+		t.Fatalf("expected nil but got %v", err)
+	}
+	if err := session.Shell(); err != nil {
+		t.Fatalf("expected nil but got %v", err)
+	}
+	if err := session.WindowChange(24, 120); err != nil {
+		t.Fatalf("expected nil but got %v", err)
+	}
+}
+
 func TestSignals(t *testing.T) {
 	t.Parallel()
 
