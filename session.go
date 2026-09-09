@@ -218,6 +218,8 @@ func (sess *session) EmulatedPty() bool {
 }
 
 func (sess *session) Pty() (Pty, <-chan Window, bool) {
+	sess.Lock()
+	defer sess.Unlock()
 	if sess.pty != nil && (sess.EmulatedPty() || !sess.pty.IsZero()) {
 		return *sess.pty, sess.winch, true
 	}
@@ -403,13 +405,21 @@ func (sess *session) handleRequests(reqs <-chan *gossh.Request) {
 			}()
 			_ = req.Reply(ok, nil)
 		case "window-change":
+			sess.Lock()
 			if sess.pty == nil {
+				sess.Unlock()
 				_ = req.Reply(false, nil)
 				continue
 			}
 			win, _, ok := parseWindow(req.Payload)
 			if ok {
 				sess.pty.Window = win
+			}
+			sess.Unlock()
+			// Sent outside the lock: winch has a capacity of one, so holding
+			// the lock across the send would let a slow consumer block every
+			// Pty() behind it.
+			if ok {
 				sess.winch <- win
 			}
 			_ = req.Reply(ok, nil)
